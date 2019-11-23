@@ -1,0 +1,177 @@
+Option Explicit
+
+Sub stock_summary()
+
+'----------------------------------------
+'------------DEFINE WORKSHEET------------
+'----------------------------------------
+
+Dim ws As Worksheet
+
+'----------------------------------------
+'----------LOOP THRU ALL SHEETS----------
+'----------------------------------------
+
+    For Each ws In Worksheets
+        
+'----------------------------------------
+'---CALCULATE & POPULATE SUMMARY GRID----
+'----------------------------------------
+
+        'set ticker variable name, fills column I
+        Dim ticker As String
+        'set ticker opening price
+        Dim tickerOpen As Double
+        'set ticker closing price
+        Dim tickerClose As Double
+        'set ticker price change, fills column J
+        Dim yearlyChange As Double
+        'set percent change in price, fills column K
+        Dim percentChange As Variant
+        'set total stock volume (NOTE: long is too short, must be string), fills column L
+        Dim tickerVol As String
+        'set summary table row
+        Dim summaryTableRow As Integer
+        'define last row of sheet
+        Dim lastRow As Long
+        'define row
+        Dim i As Long
+
+        'start summary table values at row 2
+        summaryTableRow = 2
+
+        'reset price change, percent change, total volume to 0
+        yearlyChange = 0
+        percentChange = 0
+        tickerVol = 0
+
+        'set last row of sheet
+        lastRow = Cells(Rows.Count, "A").End(xlUp).Row
+        
+            ' loop thru all tickers on sheet
+            For i = 2 To lastRow
+            
+                If i = 2 Then
+                    'set opening price
+                    tickerOpen = ws.Cells(i, 3)
+                End If
+            
+                'check for same ticker. if different than next row..
+                If ws.Cells(i + 1, 1) <> ws.Cells(i, 1) Then
+                
+                    'name summary table columns
+                    ws.Range("I1") = "Ticker"
+                    ws.Range("J1") = "Yearly Change"
+                    ws.Range("K1") = "Percent Change"
+                    ws.Range("L1") = "Total Stock Volume"
+                
+                    'set ticker name
+                    ticker = ws.Cells(i, 1)
+                    'set closing price
+                    tickerClose = ws.Cells(i, 6)
+                    'set price change
+                    yearlyChange = (tickerClose - tickerOpen)
+                    'set percent change; must use If/Then in the event that start and end values are both 0,
+                    'with an ElseIf only the start value equals 0
+                    If tickerOpen = tickerClose Then
+                            percentChange = 0
+                        ElseIf tickerOpen = 0 Then
+                            percentChange = "NULL"
+                        Else
+                            percentChange = ((tickerClose - tickerOpen) / tickerOpen)
+                        End If
+                    'add to ticker volume
+                    tickerVol = tickerVol + ws.Cells(i, 7)
+                    'print ticker name in summary table
+                    ws.Range("I" & summaryTableRow) = ticker
+                    'print yearly change in summary table
+                    ws.Range("J" & summaryTableRow) = yearlyChange
+                        'color-code yearly change to red and green
+                        If yearlyChange > 0 Then
+                            ws.Range("J" & summaryTableRow).Interior.ColorIndex = 4
+                        Else
+                            ws.Range("J" & summaryTableRow).Interior.ColorIndex = 3
+                        End If
+                    'print percent change in summary table
+                    ws.Range("K" & summaryTableRow) = percentChange
+                    'format %
+                    ws.Range("K" & summaryTableRow).NumberFormat = "0.00%"
+                    'print total stock volume
+                    ws.Range("L" & summaryTableRow) = tickerVol
+                    'increment summary table row by 1
+                    summaryTableRow = summaryTableRow + 1
+                    'reset summary columns
+                    tickerOpen = ws.Cells(i + 1, 3)
+                    tickerClose = 0
+                    yearlyChange = 0
+                    percentChange = 0
+                    tickerVol = 0
+        
+                'if next row is same ticker..
+                Else
+                    tickerVol = tickerVol + ws.Cells(i, 7)
+                End If
+            
+            Next i
+
+'---------------------------------------------
+'------------------CHALLENGE------------------
+'---------CREATE GREATEST VALUE TABLE---------
+'---------------------------------------------
+
+        'label table rows and columns
+        ws.Range("O2") = "Greatest % Increase"
+        ws.Range("O3") = "Greatest % Decrease"
+        ws.Range("O4") = "Greatest Total Volume"
+        ws.Range("P1") = "Ticker"
+        ws.Range("Q1") = "Value"
+
+        'define summary table row
+        Dim s As Long
+        'define last row of summary table
+        Dim sumLastRow As Long
+        'define max/min values
+        Dim greatestIncrease As Double
+        Dim greatestDecrease As Double
+        Dim greatestVolume As String
+        'define row # of max/min values
+        Dim rowGreatestIncrease As Long
+        Dim rowGreatestDecrease As Long
+        Dim rowGreatestVolume As Long
+
+        'set last row
+        sumLastRow = ws.Cells(Rows.Count, "I").End(xlUp).Row
+
+            'loop thru summary table for max/min values
+            For s = 2 To sumLastRow
+    
+                greatestIncrease = Application.WorksheetFunction.Max(ws.Range("K2:K" & sumLastRow))
+                greatestDecrease = Application.WorksheetFunction.Min(ws.Range("K2:K" & sumLastRow))
+                greatestVolume = Application.WorksheetFunction.Max(ws.Range("L2:L" & sumLastRow))
+
+                'print max/min values
+                ws.Range("Q2") = greatestIncrease
+                ws.Range("Q3") = greatestDecrease
+                ws.Range("Q4") = greatestVolume
+    
+                'set max/min format to %
+                ws.Range("Q2:Q3").NumberFormat = "0.00%"
+   
+                'find position of max/min values in summary table
+                rowGreatestIncrease = WorksheetFunction.Match(ws.Range("Q2"), ws.Range("K1:K" & sumLastRow), 0)
+                rowGreatestDecrease = WorksheetFunction.Match(ws.Range("Q3"), ws.Range("K1:K" & sumLastRow), 0)
+                rowGreatestVolume = WorksheetFunction.Match(ws.Range("Q4"), ws.Range("L1:L" & sumLastRow), 0)
+    
+                'print max/min tickers
+                ws.Range("P2") = ws.Cells(rowGreatestIncrease, "I")
+                ws.Range("P3") = ws.Cells(rowGreatestDecrease, "I")
+                ws.Range("P4") = ws.Cells(rowGreatestVolume, "I")
+    
+            Next s
+
+        'autofit columns to fit contents
+        ws.Cells.EntireColumn.AutoFit
+
+    Next ws
+          
+End Sub
